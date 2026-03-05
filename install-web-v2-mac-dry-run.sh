@@ -165,27 +165,56 @@ normalize_provider() {
   esac
 }
 
+csv_contains_item() {
+  local csv="$1"
+  local item="$2"
+  case ",${csv}," in
+    *",${item},"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+append_csv_unique() {
+  local csv="$1"
+  local item="$2"
+  if [[ -z "$item" ]]; then
+    printf '%s' "$csv"
+    return
+  fi
+  if [[ -z "$csv" ]]; then
+    printf '%s' "$item"
+    return
+  fi
+  if csv_contains_item "$csv" "$item"; then
+    printf '%s' "$csv"
+    return
+  fi
+  printf '%s,%s' "$csv" "$item"
+}
+
+tokenize_csv_or_spaces() {
+  local raw="$1"
+  local normalized
+  normalized="${raw//,/ }"
+  normalized="$(printf '%s' "$normalized" | tr '\r\n\t' '   ')"
+  printf '%s' "$normalized"
+}
+
 normalize_csv_by_allowlist() {
   local raw="$1"
   local allowed_csv="$2"
-  python3 - "$raw" "$allowed_csv" <<'PY'
-import re
-import sys
-
-raw = sys.argv[1]
-allowed = set([x for x in sys.argv[2].split(',') if x])
-if not raw.strip():
-    print("")
-    raise SystemExit(0)
-seen = []
-for part in re.split(r"[,\s]+", raw.strip()):
-    item = part.strip().lower()
-    if not item:
-        continue
-    if item in allowed and item not in seen:
-        seen.append(item)
-print(",".join(seen))
-PY
+  local tokenized
+  tokenized="$(tokenize_csv_or_spaces "$raw")"
+  local result=""
+  local item
+  for item in $tokenized; do
+    item="$(lower_trim "$item")"
+    [[ -n "$item" ]] || continue
+    if csv_contains_item "$allowed_csv" "$item"; then
+      result="$(append_csv_unique "$result" "$item")"
+    fi
+  done
+  printf '%s' "$result"
 }
 
 normalize_skills() {
@@ -210,34 +239,50 @@ normalize_feishu_group_policy() {
 }
 
 normalize_feishu_group_allow_from() {
-  python3 - "$1" <<'PY'
-import re
-import sys
+  local raw="$1"
+  local tokenized
+  tokenized="$(tokenize_csv_or_spaces "$raw")"
+  local result=""
+  local item
+  for item in $tokenized; do
+    item="$(trim "$item")"
+    [[ -n "$item" ]] || continue
+    result="$(append_csv_unique "$result" "$item")"
+  done
+  printf '%s' "$result"
+}
 
-raw = sys.argv[1]
-if not raw.strip():
-    print("")
-    raise SystemExit(0)
-seen = []
-for part in re.split(r"[,\r\n\t ]+", raw.strip()):
-    item = part.strip()
-    if not item:
-        continue
-    if item not in seen:
-        seen.append(item)
-print(",".join(seen))
-PY
+json_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\t'/\\t}"
+  printf '%s' "$value"
 }
 
 csv_to_json_array_pretty() {
-  python3 - "$1" <<'PY'
-import json
-import sys
-
-raw = sys.argv[1]
-items = [p.strip() for p in raw.split(",") if p.strip()]
-print(json.dumps(items, ensure_ascii=False))
-PY
+  local raw="$1"
+  local tokenized
+  tokenized="$(tokenize_csv_or_spaces "$raw")"
+  local out="["
+  local first=1
+  local item
+  for item in $tokenized; do
+    item="$(trim "$item")"
+    [[ -n "$item" ]] || continue
+    local escaped
+    escaped="$(json_escape "$item")"
+    if [[ "$first" -eq 1 ]]; then
+      out="${out}\"${escaped}\""
+      first=0
+    else
+      out="${out}, \"${escaped}\""
+    fi
+  done
+  out="${out}]"
+  printf '%s' "$out"
 }
 
 print_step() {
@@ -315,6 +360,16 @@ elif [[ "$provider_value" == "zai-coding-cn" ]]; then
 fi
 
 log_info "DRY RUN MODE: this script will not install or modify anything."
+
+print_step "0) New macOS prerequisites (simulated)"
+print_cmd "xcode-select --install"
+print_cmd "xcode-select -p"
+print_cmd "softwareupdate --list | grep -i \"Command Line Tools\""
+print_cmd "sudo softwareupdate --install \"Command Line Tools for Xcode-<version>\""
+print_cmd "sudo xcode-select --switch /Library/Developer/CommandLineTools"
+print_cmd "python3 --version"
+print_cmd "brew install python"
+print_cmd "/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
 
 print_step "1) Resolve config source"
 if [[ -z "$(trim "$api_key_value")" || -z "$(trim "$feishu_app_id_value")" || -z "$(trim "$feishu_app_secret_value")" ]]; then

@@ -45,6 +45,9 @@ test_full_dry_run_from_env() {
   )"
 
   assert_contains "$output" "DRY RUN MODE"
+  assert_contains "$output" "xcode-select --install"
+  assert_contains "$output" "softwareupdate --list | grep -i \"Command Line Tools\""
+  assert_contains "$output" "brew install python"
   assert_contains "$output" "curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --no-onboard"
   assert_contains "$output" "openclaw onboard --non-interactive --accept-risk --mode local --auth-choice moonshot-api-key --moonshot-api-key ***REDACTED***"
   assert_contains "$output" "openclaw config set channels.feishu.groupPolicy allowlist"
