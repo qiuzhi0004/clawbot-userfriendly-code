@@ -13,7 +13,7 @@ HOOKS=""
 PAIRING_CODE=""
 NO_WEB=0
 REPO_RAW_BASE_URL="${REPO_RAW_BASE_URL:-https://raw.githubusercontent.com/qiuzhi0004/clawbot-userfriendly-code/main}"
-TMP_DIR=""
+DRY_RUN_WIZARD_DIR="${DRY_RUN_WIZARD_DIR:-$HOME/.clawbot-userfriendly/dry-run}"
 
 log_info() {
   printf '\033[36m%s\033[0m\n' "$1"
@@ -26,13 +26,6 @@ log_warn() {
 log_error() {
   printf '\033[31m%s\033[0m\n' "$1" >&2
 }
-
-cleanup() {
-  if [[ -n "$TMP_DIR" && -d "$TMP_DIR" ]]; then
-    rm -rf "$TMP_DIR"
-  fi
-}
-trap cleanup EXIT
 
 trim() {
   local value="$1"
@@ -148,6 +141,23 @@ open_url() {
   if command -v open >/dev/null 2>&1; then
     open "$url" >/dev/null 2>&1 && return 0
   fi
+  return 1
+}
+
+resolve_dry_run_wizard_dir() {
+  local candidates=(
+    "$DRY_RUN_WIZARD_DIR"
+    "${TMPDIR:-/tmp}/clawbot-userfriendly/dry-run"
+    "$PWD/.clawbot-userfriendly/dry-run"
+  )
+  local dir
+  for dir in "${candidates[@]}"; do
+    [[ -n "$dir" ]] || continue
+    if mkdir -p "$dir" >/dev/null 2>&1; then
+      printf '%s' "$dir"
+      return 0
+    fi
+  done
   return 1
 }
 
@@ -295,13 +305,18 @@ HTML_EOF
 }
 
 launch_dry_run_wizard() {
-  TMP_DIR="$(mktemp -d)"
-  local html_file="$TMP_DIR/install-web-v2-mac-dry-run-wizard.html"
+  local wizard_dir=""
+  wizard_dir="$(resolve_dry_run_wizard_dir || true)"
+  if [[ -z "$wizard_dir" ]]; then
+    log_warn "Unable to create wizard directory in HOME/TMP/PWD."
+    return
+  fi
+  local html_file="$wizard_dir/install-web-v2-mac-dry-run-wizard.html"
   write_dry_run_wizard_html "$html_file"
   if ! open_url "$html_file"; then
     log_warn "Browser auto-open failed in current shell; manual open may be required."
   fi
-  log_info "Dry-run wizard opened: $html_file"
+  printf 'Dry-run wizard opened: %s\n' "$html_file"
 }
 
 normalize_provider() {

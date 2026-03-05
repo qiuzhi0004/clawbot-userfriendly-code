@@ -56,6 +56,15 @@ test_full_dry_run_from_env() {
   assert_contains "$output" "openclaw config set channels.feishu.groupAllowFrom [\"oc_a\", \"oc_b\"] --strict-json"
   assert_contains "$output" "Selected Skills: web-search,autonomy"
   assert_contains "$output" "Selected Hooks: session-memory,command-logger"
+
+  local wizard_path=""
+  wizard_path="$(printf '%s\n' "$output" | sed -n 's/.*Dry-run wizard opened: //p' | head -n1)"
+  if [[ -z "$wizard_path" ]]; then
+    fail "expected a wizard path in output"
+  fi
+  if [[ ! -f "$wizard_path" ]]; then
+    fail "expected wizard html file to exist after script exits: $wizard_path"
+  fi
 }
 
 main() {
