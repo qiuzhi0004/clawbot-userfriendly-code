@@ -623,7 +623,7 @@ write_wizard_template() {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OpenClaw 安装向导（macOS）</title>
+  <title>OpenClaw 安装向导</title>
   <style>
     :root { color-scheme: light; --bg:#f4edff; --panel:#ffffff; --line:#0f172a; --text:#111827; --muted:#4b5563; --accent:#3b82f6; --accent-soft:#dbeafe; --ok:#16a34a; --warn:#f97316; }
     * { box-sizing:border-box; }
@@ -640,6 +640,7 @@ write_wizard_template() {
     .step-subtitle { margin:0 0 12px; font-size:22px; color:var(--muted); }
     .guide-list { margin:0; padding-left:24px; font-size:25px; line-height:1.55; }
     .guide-list li { margin:5px 0; }
+    .nested-list { margin-top:8px; padding-left:24px; font-size:23px; line-height:1.5; }
     .field { display:grid; gap:8px; margin-top:14px; }
     .field-title { font-size:21px; font-weight:800; }
     input[type="text"], select { width:100%; border:2px solid #64748b; border-radius:12px; padding:14px; font-size:20px; background:#fffbeb; }
@@ -656,9 +657,14 @@ write_wizard_template() {
     .links a:hover { text-decoration:underline; }
     .right-title { margin:0 0 10px; font-size:24px; font-weight:800; }
     .shot-frame { width:100%; height:520px; border:3px solid var(--line); border-radius:12px; background:#f8fafc; display:flex; align-items:center; justify-content:center; padding:8px; overflow:hidden; }
-    .shot-placeholder { width:100%; height:100%; border-radius:8px; display:flex; align-items:center; justify-content:center; text-align:center; padding:18px; color:#0f172a; font-size:24px; font-weight:900; line-height:1.35; border:2px dashed rgba(15,23,42,.35); background:linear-gradient(135deg,#fcd34d,#fb7185); }
+    .shot { width:100%; height:100%; object-fit:contain; border-radius:8px; background:#f3f4f6; cursor:zoom-in; }
     .shot-note { margin-top:10px; font-size:18px; color:var(--muted); line-height:1.5; }
     .shot-tip { margin-top:8px; font-size:16px; color:#334155; }
+    .shot-modal { position:fixed; inset:0; background:rgba(15,23,42,.75); display:none; align-items:center; justify-content:center; padding:18px; z-index:9999; }
+    .shot-modal.active { display:flex; }
+    .shot-modal-content { width:min(1200px,96vw); height:min(90vh,920px); background:#0f172a; border:3px solid #cbd5e1; border-radius:14px; padding:12px; display:flex; align-items:center; justify-content:center; position:relative; }
+    .shot-modal img { max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; background:#111827; border-radius:8px; }
+    .shot-close { position:absolute; top:10px; right:10px; border:2px solid #e2e8f0; border-radius:10px; background:#111827; color:#f8fafc; font-size:15px; font-weight:700; padding:6px 10px; cursor:pointer; }
     .nav { margin-top:16px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
     .dots { display:flex; gap:8px; }
     .dot { width:14px; height:14px; border-radius:999px; border:2px solid var(--line); background:#fff; }
@@ -666,6 +672,8 @@ write_wizard_template() {
     .btn { border:3px solid var(--line); border-radius:14px; background:#c7d2fe; font-size:24px; font-weight:800; padding:8px 20px; cursor:pointer; }
     .btn[disabled] { opacity:.55; cursor:not-allowed; }
     .btn-next { background:#93c5fd; }
+    .submit-wrap { display:none; }
+    .submit-wrap.active { display:block; }
     .submit-btn { border:3px solid var(--line); border-radius:14px; background:#86efac; font-size:24px; font-weight:900; padding:10px 20px; cursor:pointer; }
     @media (max-width:1080px) {
       .header h1 { font-size:28px; }
@@ -679,7 +687,7 @@ write_wizard_template() {
 <body>
   <main class="wizard">
     <div class="header">
-      <h1>🦞 OpenClaw 安装引导（macOS）</h1>
+      <h1>🦞 OpenClaw 安装引导</h1>
       <div class="step-chip" id="step-chip">Step 1 / 9</div>
     </div>
     <form method="post" action="/submit" id="wizard-form">
@@ -752,7 +760,7 @@ write_wizard_template() {
           </div>
           <div class="step-page" data-step="4">
             <h2 class="step-title">4. 选择 Skill</h2>
-            <p class="step-subtitle">可多选，部分技能在 macOS 仅做配置</p>
+            <p class="step-subtitle">可多选，部分技能在 Windows 仅做配置</p>
             <section class="skills-block">
               <label class="skill-item">
                 <input id="skill-web-search" name="skills" type="checkbox" value="web-search">
@@ -764,19 +772,19 @@ write_wizard_template() {
               </label>
               <label class="skill-item">
                 <input id="skill-summarize" name="skills" type="checkbox" value="summarize">
-                <span><span class="skill-name">网页总结</span><span class="skill-desc">需要额外工具，默认仅写入配置。</span></span>
+                <span><span class="skill-name">网页总结</span><span class="skill-desc">需要额外工具，Windows 将跳过安装。</span></span>
               </label>
               <label class="skill-item">
                 <input id="skill-nano-pdf" name="skills" type="checkbox" value="nano-pdf">
-                <span><span class="skill-name">PDF 处理</span><span class="skill-desc">需要额外工具，默认仅写入配置。</span></span>
+                <span><span class="skill-name">PDF 处理</span><span class="skill-desc">需要额外工具，Windows 将跳过安装。</span></span>
               </label>
               <label class="skill-item">
                 <input id="skill-openai-whisper" name="skills" type="checkbox" value="openai-whisper">
-                <span><span class="skill-name">音频转文字</span><span class="skill-desc">需要额外工具，默认仅写入配置。</span></span>
+                <span><span class="skill-name">音频转文字</span><span class="skill-desc">需要额外工具，Windows 将跳过安装。</span></span>
               </label>
               <label class="skill-item">
                 <input id="skill-github" name="skills" type="checkbox" value="github">
-                <span><span class="skill-name">GitHub 能力</span><span class="skill-desc">需要额外工具，默认仅写入配置。</span></span>
+                <span><span class="skill-name">GitHub 能力</span><span class="skill-desc">需要额外工具，Windows 将跳过安装。</span></span>
               </label>
             </section>
           </div>
@@ -798,7 +806,7 @@ write_wizard_template() {
               </label>
             </section>
             <div class="code-wrap">
-              <p style="margin:0 0 10px;font-size:18px;color:#475569;">确认前几步配置后，点击“开始安装”。安装会在终端执行。</p>
+              <p style="margin:0 0 10px;font-size:18px;color:#475569;">确认前两步配置后，点击“开始安装”。安装会在终端执行。</p>
               <button type="button" class="submit-btn" id="start-install-btn">开始安装</button>
             </div>
           </div>
@@ -806,8 +814,8 @@ write_wizard_template() {
             <h2 class="step-title">6. 等待安装</h2>
             <ol class="guide-list">
               <li>安装已在终端启动，请等待完成。</li>
-              <li>脚本会执行官方 install.sh（带 --no-onboard）并自动完成后续配置。</li>
-              <li>首次运行可能安装/检查 Node.js 与 npm，请按终端提示操作。</li>
+              <li>首次运行会自动检查并安装 NuGet / winget / Node.js LTS。</li>
+              <li>执行期间请不要关闭终端窗口。</li>
               <li>终端出现 Installed and configured successfully 后再继续。</li>
             </ol>
             <div class="code-wrap">
@@ -852,13 +860,12 @@ openclaw gateway stop    # 停止网关
 openclaw gateway restart # 重启网关
 openclaw dashboard       # 打开管理面板
 openclaw models list     # 查看可用模型
-openclaw skills          # 查看已安装技能
-openclaw doctor --fix    # 修复常见环境问题</pre>
+openclaw skills          # 查看已安装技能</pre>
             </div>
             <div class="links" style="margin-top:12px;">
               <a href="https://openclaw.ai" target="_blank">OpenClaw 官网</a><br>
               <a href="https://docs.openclaw.ai" target="_blank">官方文档</a><br>
-              <a href="https://github.com/openclaw/openclaw" target="_blank">GitHub 仓库</a><br>
+              <a href="https://discord.com/invite/clawd" target="_blank">Discord 社区</a><br>
               <a href="http://localhost:18789" target="_blank">Dashboard 管理面板</a>
             </div>
             <div class="code-wrap">
@@ -867,12 +874,12 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
           </div>
         </section>
         <aside class="panel">
-          <h3 class="right-title" id="shot-title">步骤示意</h3>
+          <h3 class="right-title" id="shot-title">步骤截图</h3>
           <div class="shot-frame">
-            <div id="shot-placeholder" class="shot-placeholder">步骤示意占位区</div>
+            <img id="shot-image" class="shot" src="https://guide-app-lyart.vercel.app/assets/Pasted%20image%2020260130013219.jpg" alt="步骤截图">
           </div>
-          <p class="shot-note" id="shot-note">这里预留为图示说明区域，当前使用色块占位。</p>
-          <p class="shot-tip">后续可替换为真实截图，不影响安装流程。</p>
+          <p class="shot-note" id="shot-note">右侧为操作截图示意，当前先使用统一图片占位。</p>
+          <p class="shot-tip">点击截图可放大查看，按 ESC 或点击遮罩关闭。</p>
         </aside>
       </div>
       <div class="nav">
@@ -882,55 +889,47 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
       </div>
     </form>
   </main>
+  <div class="shot-modal" id="shot-modal">
+    <div class="shot-modal-content">
+      <button type="button" class="shot-close" id="shot-close-btn">关闭</button>
+      <img id="shot-modal-image" src="" alt="放大截图">
+    </div>
+  </div>
   <script>
     var defaultProvider = __DEFAULT_PROVIDER_JSON__;
     var defaultSkills = __DEFAULT_SKILLS_JSON__;
     var defaultHooks = __DEFAULT_HOOKS_JSON__;
     var defaultFeishuGroupPolicy = __DEFAULT_FEISHU_GROUP_POLICY_JSON__;
     var defaultFeishuGroupAllowFrom = __DEFAULT_FEISHU_GROUP_ALLOW_FROM_JSON__;
-
-    var labels = {
-      "kimi-code":"Kimi Code API Key",
-      "moonshot":"Moonshot API Key",
-      "minimax":"MiniMax API Key",
-      "zai":"Z.AI API Key",
-      "zai-coding-global":"Z.AI API Key",
-      "zai-coding-cn":"Z.AI API Key"
-    };
-
+    var labels = { "kimi-code":"Kimi Code API Key", "moonshot":"Moonshot API Key", "minimax":"MiniMax API Key", "zai":"Z.AI API Key", "zai-coding-global":"Z.AI API Key", "zai-coding-cn":"Z.AI API Key" };
     var stepMeta = [
-      { title: "步骤 1：配置模型", note: "请先创建并粘贴 API Key。", swatch:["#fcd34d", "#fb7185"] },
-      { title: "步骤 2：配置飞书机器人", note: "填写飞书 App ID 与 App Secret。", swatch:["#a7f3d0", "#22d3ee"] },
-      { title: "步骤 3：群组访问策略", note: "配置群组策略与可选白名单。", swatch:["#bfdbfe", "#818cf8"] },
-      { title: "步骤 4：选择 Skill", note: "根据需要选择技能。", swatch:["#fde68a", "#fb7185"] },
-      { title: "步骤 5：启用 Hooks", note: "按需启用事件驱动自动化 Hooks。", swatch:["#bbf7d0", "#34d399"] },
-      { title: "步骤 6：等待安装", note: "终端将执行 macOS 安装与配置流程。", swatch:["#fecaca", "#f97316"] },
-      { title: "步骤 7：飞书配对", note: "可先填写配对码，也可安装后填写。", swatch:["#ddd6fe", "#a78bfa"] },
-      { title: "步骤 8：提交配对码", note: "在当前页面提交配对码并执行配对。", swatch:["#d9f99d", "#84cc16"] },
-      { title: "步骤 9：完成与常用命令", note: "复制常用命令并开始使用。", swatch:["#e2e8f0", "#94a3b8"] }
+      { title: "步骤 1：配置模型", note: "请先创建并粘贴 API Key。" },
+      { title: "步骤 2：配置飞书机器人", note: "填写飞书 App ID 与 App Secret。" },
+      { title: "步骤 3：群组访问策略", note: "配置群组策略与可选白名单。" },
+      { title: "步骤 4：选择 Skill", note: "根据需要选择技能。" },
+      { title: "步骤 5：启用 Hooks", note: "按需启用事件驱动自动化 Hooks。" },
+      { title: "步骤 6：等待安装", note: "提交后会自动安装依赖并继续安装 OpenClaw。" },
+      { title: "步骤 7：飞书配对", note: "可先填写配对码，也可安装后填写。" },
+      { title: "步骤 8：提交配对码", note: "在当前页面提交配对码并执行配对。" },
+      { title: "步骤 9：完成与常用命令", note: "复制常用命令并开始使用。" }
     ];
-
     var totalSteps = stepMeta.length;
     var currentStep = 1;
     var installSubmitted = false;
     var installConfirmed = false;
-
     var providerEl = document.getElementById("provider");
     var labelEl = document.getElementById("api-key-label");
     var feishuGroupPolicyEl = document.getElementById("feishuGroupPolicy");
     var feishuGroupAllowFromEl = document.getElementById("feishuGroupAllowFrom");
-
     var webSearchEl = document.getElementById("skill-web-search");
     var autonomyEl = document.getElementById("skill-autonomy");
     var summarizeEl = document.getElementById("skill-summarize");
     var nanoPdfEl = document.getElementById("skill-nano-pdf");
     var whisperEl = document.getElementById("skill-openai-whisper");
     var githubEl = document.getElementById("skill-github");
-
     var hookSessionMemoryEl = document.getElementById("hook-session-memory");
     var hookCommandLoggerEl = document.getElementById("hook-command-logger");
     var hookBootMdEl = document.getElementById("hook-boot-md");
-
     var pages = document.querySelectorAll(".step-page");
     var prevBtn = document.getElementById("prev-btn");
     var nextBtn = document.getElementById("next-btn");
@@ -938,8 +937,10 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
     var stepChipEl = document.getElementById("step-chip");
     var shotTitleEl = document.getElementById("shot-title");
     var shotNoteEl = document.getElementById("shot-note");
-    var shotPlaceholderEl = document.getElementById("shot-placeholder");
-
+    var shotImageEl = document.getElementById("shot-image");
+    var shotModalEl = document.getElementById("shot-modal");
+    var shotModalImageEl = document.getElementById("shot-modal-image");
+    var shotCloseBtnEl = document.getElementById("shot-close-btn");
     var startInstallBtn = document.getElementById("start-install-btn");
     var installStatusEl = document.getElementById("install-status");
     var confirmInstallBtn = document.getElementById("confirm-install-btn");
@@ -947,26 +948,19 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
     var pairingCodeSubmitEl = document.getElementById("pairingCodeSubmit");
     var submitPairingBtn = document.getElementById("submit-pairing-btn");
     var pairingSubmitStatusEl = document.getElementById("pairing-submit-status");
-
-    providerEl.value = defaultProvider || "kimi-code";
+    providerEl.value = defaultProvider;
     webSearchEl.checked = defaultSkills.includes("web-search");
     autonomyEl.checked = defaultSkills.includes("autonomy");
     summarizeEl.checked = defaultSkills.includes("summarize");
     nanoPdfEl.checked = defaultSkills.includes("nano-pdf");
     whisperEl.checked = defaultSkills.includes("openai-whisper");
     githubEl.checked = defaultSkills.includes("github");
-
     hookSessionMemoryEl.checked = defaultHooks.includes("session-memory");
     hookCommandLoggerEl.checked = defaultHooks.includes("command-logger");
     hookBootMdEl.checked = defaultHooks.includes("boot-md");
-
     feishuGroupPolicyEl.value = defaultFeishuGroupPolicy || "open";
     feishuGroupAllowFromEl.value = defaultFeishuGroupAllowFrom || "";
-
-    function updateApiLabel() {
-      labelEl.textContent = labels[providerEl.value] || "API Key";
-    }
-
+    function updateApiLabel() { labelEl.textContent = labels[providerEl.value] || "API Key"; }
     function ensureValidStep(current) {
       if (current === 1) {
         if (!providerEl.value || !document.getElementById("apiKey").value.trim()) {
@@ -990,11 +984,9 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
       }
       return true;
     }
-
     function encodeFormValue(value) {
       return encodeURIComponent(value).replace(/%20/g, "+");
     }
-
     function buildSubmitBody() {
       var parts = [];
       parts.push("provider=" + encodeFormValue(providerEl.value || ""));
@@ -1004,19 +996,16 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
       parts.push("feishuGroupPolicy=" + encodeFormValue(feishuGroupPolicyEl.value || "open"));
       parts.push("feishuGroupAllowFrom=" + encodeFormValue(feishuGroupAllowFromEl.value || ""));
       parts.push("pairingCode=");
-
       var skillEls = document.querySelectorAll("input[name='skills']:checked");
       for (var s = 0; s < skillEls.length; s++) {
         parts.push("skills=" + encodeFormValue(skillEls[s].value || ""));
       }
-
       var hookEls = document.querySelectorAll("input[name='hooks']:checked");
       for (var h = 0; h < hookEls.length; h++) {
         parts.push("hooks=" + encodeFormValue(hookEls[h].value || ""));
       }
       return parts.join("&");
     }
-
     function startInstall() {
       if (!ensureValidStep(1) || !ensureValidStep(2) || !ensureValidStep(3)) {
         return;
@@ -1024,7 +1013,6 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
       startInstallBtn.disabled = true;
       startInstallBtn.textContent = "安装启动中...";
       installStatusEl.textContent = "正在提交配置并启动安装...";
-
       var xhr = new XMLHttpRequest();
       xhr.open("POST", "/submit", true);
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
@@ -1047,7 +1035,6 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
       };
       xhr.send(buildSubmitBody());
     }
-
     function submitPairingCode() {
       var code = pairingCodeSubmitEl.value ? pairingCodeSubmitEl.value.trim() : "";
       if (!code) {
@@ -1057,7 +1044,6 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
       submitPairingBtn.disabled = true;
       submitPairingBtn.textContent = "提交中...";
       pairingSubmitStatusEl.textContent = "正在提交配对码...";
-
       var xhr = new XMLHttpRequest();
       xhr.open("POST", "/pairing-submit", true);
       xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
@@ -1077,22 +1063,22 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
       };
       xhr.send("pairingCode=" + encodeFormValue(code));
     }
-
+    function openShotModal() {
+      shotModalImageEl.src = shotImageEl.src;
+      shotModalEl.className = "shot-modal active";
+    }
+    function closeShotModal() {
+      shotModalEl.className = "shot-modal";
+    }
     function renderStep() {
       for (var p = 0; p < pages.length; p++) {
         var page = pages[p];
         var pageStep = Number(page.getAttribute("data-step"));
         page.classList.toggle("active", pageStep === currentStep);
       }
-
       stepChipEl.textContent = "Step " + currentStep + " / " + totalSteps;
       shotTitleEl.textContent = stepMeta[currentStep - 1].title;
       shotNoteEl.textContent = stepMeta[currentStep - 1].note;
-
-      var swatch = stepMeta[currentStep - 1].swatch;
-      shotPlaceholderEl.style.background = "linear-gradient(135deg," + swatch[0] + "," + swatch[1] + ")";
-      shotPlaceholderEl.textContent = stepMeta[currentStep - 1].title + "\n图示占位";
-
       prevBtn.disabled = currentStep === 1;
       nextBtn.style.display = (currentStep === totalSteps || currentStep === 5) ? "none" : "inline-block";
       if (currentStep === 6) {
@@ -1100,7 +1086,6 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
       } else {
         nextBtn.disabled = false;
       }
-
       dotsEl.innerHTML = "";
       for (var i = 1; i <= totalSteps; i++) {
         var dot = document.createElement("span");
@@ -1108,7 +1093,6 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
         dotsEl.appendChild(dot);
       }
     }
-
     function copyText(content) {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(content);
@@ -1121,28 +1105,22 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
       document.execCommand("copy");
       document.body.removeChild(area);
     }
-
     providerEl.addEventListener("change", updateApiLabel);
     prevBtn.addEventListener("click", function () {
       currentStep = Math.max(1, currentStep - 1);
       renderStep();
     });
-
     nextBtn.addEventListener("click", function () {
-      if (!ensureValidStep(currentStep)) {
-        return;
-      }
+      if (!ensureValidStep(currentStep)) { return; }
       if (currentStep === 6 && !installConfirmed) {
         return;
       }
       currentStep = Math.min(totalSteps, currentStep + 1);
       renderStep();
     });
-
     if (startInstallBtn) {
       startInstallBtn.addEventListener("click", startInstall);
     }
-
     if (confirmInstallBtn) {
       confirmInstallBtn.addEventListener("click", function () {
         if (!installSubmitted) {
@@ -1154,7 +1132,6 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
         renderStep();
       });
     }
-
     if (pairingCodeEl) {
       pairingCodeEl.addEventListener("input", function () {
         if (!pairingCodeSubmitEl.value || !pairingCodeSubmitEl.value.trim()) {
@@ -1162,33 +1139,39 @@ openclaw doctor --fix    # 修复常见环境问题</pre>
         }
       });
     }
-
     if (submitPairingBtn) {
       submitPairingBtn.addEventListener("click", submitPairingCode);
     }
-
+    if (shotImageEl && shotModalEl && shotModalImageEl && shotCloseBtnEl) {
+      shotImageEl.addEventListener("click", openShotModal);
+      shotCloseBtnEl.addEventListener("click", closeShotModal);
+      shotModalEl.addEventListener("click", function (event) {
+        if (event.target === shotModalEl) {
+          closeShotModal();
+        }
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeShotModal();
+        }
+      });
+    }
     document.getElementById("wizard-form").addEventListener("submit", function (event) {
       event.preventDefault();
     });
-
     var copyButtons = document.querySelectorAll("[data-copy-target]");
     for (var b = 0; b < copyButtons.length; b++) {
       (function (button) {
         button.addEventListener("click", function () {
           var targetId = button.getAttribute("data-copy-target");
           var target = document.getElementById(targetId);
-          if (!target) {
-            return;
-          }
-          copyText(target.textContent || "");
-          button.textContent = "已复制";
-          setTimeout(function () {
-            button.textContent = "一键复制命令";
-          }, 1200);
+        if (!target) { return; }
+        copyText(target.textContent || "");
+        button.textContent = "已复制";
+          setTimeout(function () { button.textContent = "一键复制命令"; }, 1200);
         });
       })(copyButtons[b]);
     }
-
     updateApiLabel();
     if (pairingCodeEl && pairingCodeSubmitEl) {
       pairingCodeSubmitEl.value = pairingCodeEl.value || "";
