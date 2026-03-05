@@ -12,6 +12,7 @@ SKILLS=""
 HOOKS=""
 PAIRING_CODE=""
 NO_WEB=0
+REPO_RAW_BASE_URL="${REPO_RAW_BASE_URL:-https://raw.githubusercontent.com/qiuzhi0004/clawbot-userfriendly-code/main}"
 
 log_info() {
   printf '\033[36m%s\033[0m\n' "$1"
@@ -120,6 +121,9 @@ Options:
   -Hooks, --hooks <comma_or_space_separated>
   -PairingCode, --pairing-code <code>
   -NoWeb, --no-web
+
+One-line start from a brand-new macOS terminal:
+  curl -fsSL https://raw.githubusercontent.com/qiuzhi0004/clawbot-userfriendly-code/main/install-web-v2-mac-dry-run.sh | bash
 HELP_EOF
         exit 0
         ;;
@@ -360,6 +364,7 @@ elif [[ "$provider_value" == "zai-coding-cn" ]]; then
 fi
 
 log_info "DRY RUN MODE: this script will not install or modify anything."
+print_cmd "curl -fsSL ${REPO_RAW_BASE_URL}/install-web-v2-mac-dry-run.sh | bash"
 
 print_step "0) New macOS prerequisites (simulated)"
 print_cmd "xcode-select --install"

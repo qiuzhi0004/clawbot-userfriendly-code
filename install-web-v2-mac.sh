@@ -12,6 +12,7 @@ SKILLS=""
 HOOKS=""
 PAIRING_CODE=""
 NO_WEB=0
+REPO_RAW_BASE_URL="${REPO_RAW_BASE_URL:-https://raw.githubusercontent.com/qiuzhi0004/clawbot-userfriendly-code/main}"
 
 WIZARD_SERVER_PID=""
 WIZARD_SUBMIT_FILE=""
@@ -253,6 +254,9 @@ Options:
   -Hooks, --hooks <comma_or_space_separated>
   -PairingCode, --pairing-code <code>
   -NoWeb, --no-web
+
+One-line start from a brand-new macOS terminal:
+  curl -fsSL https://raw.githubusercontent.com/qiuzhi0004/clawbot-userfriendly-code/main/install-web-v2-mac.sh | bash
 HELP_EOF
         exit 0
         ;;
@@ -264,6 +268,98 @@ HELP_EOF
   done
 }
 
+add_common_bin_paths() {
+  local candidates=("/opt/homebrew/bin" "/usr/local/bin" "$HOME/.local/bin")
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    [[ -d "$candidate" ]] || continue
+    case ":$PATH:" in
+      *":$candidate:"*) ;;
+      *) PATH="$candidate:$PATH" ;;
+    esac
+  done
+  export PATH
+}
+
+activate_homebrew_shellenv() {
+  if [[ -x "/opt/homebrew/bin/brew" ]]; then
+    # shellcheck disable=SC2046
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    return
+  fi
+  if [[ -x "/usr/local/bin/brew" ]]; then
+    # shellcheck disable=SC2046
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
+}
+
+ensure_command_line_tools() {
+  if xcode-select -p >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log_warn "Xcode Command Line Tools not detected. Requesting install..."
+  xcode-select --install >/dev/null 2>&1 || true
+  log_warn "If an installer popup appears, finish it. Waiting up to 30 minutes..."
+
+  local waited=0
+  while ! xcode-select -p >/dev/null 2>&1; do
+    if (( waited >= 1800 )); then
+      log_error "Command Line Tools not ready yet."
+      log_error "Please finish installation, then re-run this same one-line command."
+      return 1
+    fi
+    if (( waited % 30 == 0 )); then
+      log_info "Still waiting for Command Line Tools installation..."
+    fi
+    sleep 5
+    waited=$((waited + 5))
+  done
+
+  log_info "Command Line Tools detected."
+  return 0
+}
+
+ensure_homebrew() {
+  add_common_bin_paths
+  activate_homebrew_shellenv
+  if command -v brew >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log_warn "Homebrew not found. Installing Homebrew..."
+  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+  add_common_bin_paths
+  activate_homebrew_shellenv
+  if ! command -v brew >/dev/null 2>&1; then
+    log_error "Homebrew installation did not expose 'brew' on PATH."
+    log_error "Please open a new terminal and re-run this script."
+    return 1
+  fi
+  return 0
+}
+
+ensure_python3() {
+  add_common_bin_paths
+  activate_homebrew_shellenv
+  if command -v python3 >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log_warn "python3 not found. Installing Python via Homebrew..."
+  ensure_homebrew || return 1
+  brew install python
+
+  add_common_bin_paths
+  activate_homebrew_shellenv
+  if ! command -v python3 >/dev/null 2>&1; then
+    log_error "python3 is still unavailable after installation."
+    return 1
+  fi
+  return 0
+}
+
 ensure_prerequisites() {
   if ! command -v curl >/dev/null 2>&1; then
     log_error "curl is required. Please install curl and retry."
@@ -273,10 +369,10 @@ ensure_prerequisites() {
     log_error "bash is required."
     exit 1
   fi
-  if ! command -v python3 >/dev/null 2>&1; then
-    log_error "python3 is required for this installer. Please install python3 and retry."
-    exit 1
-  fi
+
+  add_common_bin_paths
+  ensure_command_line_tools || exit 1
+  ensure_python3 || exit 1
 }
 
 get_free_port() {
