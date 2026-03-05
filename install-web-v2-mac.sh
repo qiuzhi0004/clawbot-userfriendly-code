@@ -360,6 +360,30 @@ ensure_python3() {
   return 0
 }
 
+ensure_node_and_npm() {
+  add_common_bin_paths
+  activate_homebrew_shellenv
+  if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
+    return 0
+  fi
+
+  log_warn "Node.js / npm not found. Installing Node.js via Homebrew..."
+  ensure_homebrew || return 1
+  brew install node
+
+  add_common_bin_paths
+  activate_homebrew_shellenv
+  if ! command -v node >/dev/null 2>&1; then
+    log_error "node is still unavailable after installation."
+    return 1
+  fi
+  if ! command -v npm >/dev/null 2>&1; then
+    log_error "npm is still unavailable after Node.js installation."
+    return 1
+  fi
+  return 0
+}
+
 ensure_prerequisites() {
   if ! command -v curl >/dev/null 2>&1; then
     log_error "curl is required. Please install curl and retry."
@@ -373,6 +397,7 @@ ensure_prerequisites() {
   add_common_bin_paths
   ensure_command_line_tools || exit 1
   ensure_python3 || exit 1
+  ensure_node_and_npm || exit 1
 }
 
 get_free_port() {

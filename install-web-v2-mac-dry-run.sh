@@ -153,7 +153,12 @@ resolve_dry_run_wizard_dir() {
   local dir
   for dir in "${candidates[@]}"; do
     [[ -n "$dir" ]] || continue
-    if mkdir -p "$dir" >/dev/null 2>&1; then
+    if ! mkdir -p "$dir" >/dev/null 2>&1; then
+      continue
+    fi
+    local probe_file="$dir/.wizard-write-test.$$"
+    if touch "$probe_file" >/dev/null 2>&1; then
+      rm -f "$probe_file" >/dev/null 2>&1 || true
       printf '%s' "$dir"
       return 0
     fi
@@ -212,27 +217,30 @@ write_dry_run_wizard_html() {
         <div class="step-page active" data-step="1">
           <h2 class="step-title">1. 配置大模型 API Key</h2>
           <p class="step-sub">Dry Run 页面：可点击查看完整流程，不会真实安装。</p>
-          <div class="field"><label>模型厂商</label><select><option>Kimi Code</option><option>Moonshot</option><option>MiniMax</option><option>Z.AI</option></select></div>
+          <ol class="guide-list"><li>创建并粘贴 API Key</li><li>选择对应模型厂商</li><li>推荐先用 Kimi Code / GLM（Z.AI）</li></ol>
+          <div class="field"><label>模型厂商</label><select><option>Kimi Code（推荐）</option><option>Moonshot（月之暗面）</option><option>MiniMax</option><option>GLM（Z.AI 自动）</option><option>GLM Coding（Global）</option><option>GLM Coding（CN）</option></select></div>
           <div class="field"><label>API Key</label><input placeholder="sk-xxxx"></div>
         </div>
         <div class="step-page" data-step="2">
           <h2 class="step-title">2. 配置飞书机器人</h2>
-          <ol class="guide-list"><li>填写 App ID</li><li>填写 App Secret</li><li>确认权限与发布</li></ol>
+          <ol class="guide-list"><li>创建飞书应用</li><li>获取 App ID / App Secret</li><li>发布应用并开通机器人权限</li></ol>
           <div class="field"><label>飞书 App ID</label><input placeholder="cli_xxx"></div>
           <div class="field"><label>飞书 App Secret</label><input placeholder="secret_xxx"></div>
         </div>
         <div class="step-page" data-step="3">
           <h2 class="step-title">3. 选择群组访问策略</h2>
-          <div class="field"><label>群组策略</label><select><option>open</option><option>allowlist</option><option>disabled</option></select></div>
+          <div class="field"><label>群组策略</label><select><option>open（允许所有群组）</option><option>allowlist（仅白名单群组）</option><option>disabled（禁用群组消息）</option></select></div>
           <div class="field"><label>群组白名单</label><input placeholder="oc_xxx,oc_yyy"></div>
         </div>
         <div class="step-page" data-step="4">
           <h2 class="step-title">4. 选择 Skill</h2>
-          <ol class="guide-list"><li>web-search</li><li>autonomy</li><li>summarize</li><li>github</li></ol>
+          <ol class="guide-list"><li>web-search（网页搜索）</li><li>autonomy（自主执行）</li><li>summarize / nano-pdf / openai-whisper / github（按需）</li></ol>
+          <div class="field"><label>已支持选项（模拟）</label><input value="web-search, autonomy, summarize, nano-pdf, openai-whisper, github" readonly></div>
         </div>
         <div class="step-page" data-step="5">
           <h2 class="step-title">5. 启用 Hooks</h2>
           <ol class="guide-list"><li>session-memory</li><li>command-logger</li><li>boot-md</li></ol>
+          <div class="field"><label>Hooks（模拟）</label><input value="session-memory, command-logger, boot-md" readonly></div>
           <button class="cta" id="startBtn" type="button">开始安装（模拟）</button>
           <p class="status" id="installStatus">点击按钮后会跳到“等待安装”步骤。</p>
         </div>
@@ -251,7 +259,7 @@ write_dry_run_wizard_html() {
         </div>
         <div class="step-page" data-step="9">
           <h2 class="step-title">9. 安装完成后常用命令</h2>
-          <ol class="guide-list"><li>openclaw gateway start</li><li>openclaw dashboard</li><li>openclaw models list</li></ol>
+          <ol class="guide-list"><li>openclaw gateway start / stop / restart</li><li>openclaw dashboard</li><li>openclaw models list</li><li>openclaw skills</li><li>openclaw doctor --fix</li></ol>
           <p class="status">Dry Run 完成：页面流程演示结束。</p>
         </div>
       </section>
@@ -311,6 +319,7 @@ launch_dry_run_wizard() {
     log_warn "Unable to create wizard directory in HOME/TMP/PWD."
     return
   fi
+  wizard_dir="${wizard_dir%/}"
   local html_file="$wizard_dir/install-web-v2-mac-dry-run-wizard.html"
   write_dry_run_wizard_html "$html_file"
   if ! open_url "$html_file"; then
@@ -557,9 +566,12 @@ print_cmd "xcode-select -p"
 print_cmd "softwareupdate --list | grep -i \"Command Line Tools\""
 print_cmd "sudo softwareupdate --install \"Command Line Tools for Xcode-<version>\""
 print_cmd "sudo xcode-select --switch /Library/Developer/CommandLineTools"
-print_cmd "python3 --version"
-print_cmd "brew install python"
 print_cmd "/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+print_cmd "brew install python"
+print_cmd "brew install node"
+print_cmd "python3 --version"
+print_cmd "node --version"
+print_cmd "npm --version"
 
 print_step "1) Resolve config source"
 if [[ -z "$(trim "$api_key_value")" || -z "$(trim "$feishu_app_id_value")" || -z "$(trim "$feishu_app_secret_value")" ]]; then

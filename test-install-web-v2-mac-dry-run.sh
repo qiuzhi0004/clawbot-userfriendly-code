@@ -32,6 +32,8 @@ test_missing_required_config_no_web() {
 
 test_full_dry_run_from_env() {
   local output=""
+  local code=0
+  set +e
   output="$(
     OPENCLAW_API_KEY="test-api-key" \
     OPENCLAW_FEISHU_APP_ID="cli_test" \
@@ -43,6 +45,12 @@ test_full_dry_run_from_env() {
     OPENCLAW_HOOKS="session-memory command-logger unknown-hook" \
     "$SCRIPT" --no-web 2>&1
   )"
+  code=$?
+  set -e
+
+  if [[ $code -ne 0 ]]; then
+    fail "expected zero exit for full dry run, got $code. output: $output"
+  fi
 
   assert_contains "$output" "DRY RUN MODE"
   assert_contains "$output" "Dry-run wizard opened:"
@@ -50,6 +58,7 @@ test_full_dry_run_from_env() {
   assert_contains "$output" "xcode-select --install"
   assert_contains "$output" "softwareupdate --list | grep -i \"Command Line Tools\""
   assert_contains "$output" "brew install python"
+  assert_contains "$output" "brew install node"
   assert_contains "$output" "curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --no-onboard"
   assert_contains "$output" "openclaw onboard --non-interactive --accept-risk --mode local --auth-choice moonshot-api-key --moonshot-api-key ***REDACTED***"
   assert_contains "$output" "openclaw config set channels.feishu.groupPolicy allowlist"
