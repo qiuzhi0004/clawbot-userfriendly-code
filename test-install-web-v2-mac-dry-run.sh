@@ -45,6 +45,7 @@ test_full_dry_run_from_env() {
   )"
 
   assert_contains "$output" "DRY RUN MODE"
+  assert_contains "$output" "Dry-run wizard opened:"
   assert_contains "$output" "curl -fsSL https://raw.githubusercontent.com/qiuzhi0004/clawbot-userfriendly-code/main/install-web-v2-mac-dry-run.sh | bash"
   assert_contains "$output" "xcode-select --install"
   assert_contains "$output" "softwareupdate --list | grep -i \"Command Line Tools\""
